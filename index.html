@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Tata Surya</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      #button-container {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+      }
+
+      button {
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="button-container">
+      <button onclick="switchToTopView()">Tampilan Atas</button>
+      <button onclick="switchToSideView()">Tampilan Samping</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // Scene
+      const scene = new THREE.Scene();
+
+      // Kamera untuk tampilan atas
+      const topCamera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      topCamera.position.set(0, 100, 0);
+      topCamera.rotation.x = -Math.PI / 2;
+
+      // Kamera untuk tampilan samping
+      const sideCamera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      sideCamera.position.set(100, 0, 0);
+      sideCamera.lookAt(0, 0, 0);
+
+      // Set kamera aktif awal
+      let activeCamera = topCamera;
+
+      // Renderer
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Matahari
+      const sunGeometry = new THREE.SphereGeometry(5 * 3, 32, 32); // Perbesar ukuran matahari menjadi 300%
+      const sunMaterial = new THREE.MeshBasicMaterial({
+        map: new THREE.TextureLoader().load("./texture/sun.jpeg"),
+        emissive: 0xffff00,
+      }); // Gunakan material dasar dengan peta tekstur dan sifat emissive
+      const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+      scene.add(sun);
+
+      // Rotasi matahari
+      function animateSun() {
+        sun.rotation.y += 0.001; // Atur kecepatan rotasi matahari di sini
+      }
+
+      // Planet-planet
+      const planets = [];
+      const planetData = [
+        {
+          name: "Merkurius",
+          distance: 30,
+          size: (2 / 5) * 3,
+          texture: "./texture/markurius.jpeg",
+          speed: 0.002,
+          tilt: 0.03,
+        }, // Merkurius (20% ukuran matahari)
+        {
+          name: "Venus",
+          distance: 45,
+          size: (3 / 5) * 3,
+          texture: "./texture/venus.jpg",
+          speed: 0.001,
+          tilt: 2.64,
+        }, // Venus (30% ukuran matahari)
+        {
+          name: "Bumi",
+          distance: 60,
+          size: (4 / 5) * 3,
+          texture: "./texture/bumi.jpg",
+          speed: 0.0007,
+          tilt: 23.44,
+        }, // Bumi (40% ukuran matahari)
+        {
+          name: "Mars",
+          distance: 75,
+          size: (3.6 / 5) * 3,
+          texture: "./texture/mars.jpeg",
+          speed: 0.0005,
+          tilt: 25.19,
+        }, // Mars (72% ukuran matahari)
+        {
+          name: "Jupiter",
+          distance: 90,
+          size: (6 / 5) * 3,
+          texture: "./texture/jupiter.jpg",
+          speed: 0.0004,
+          tilt: 3.13,
+        }, // Jupiter (120% ukuran matahari)
+        {
+          name: "Saturnus",
+          distance: 105,
+          size: (5 / 5) * 3,
+          texture: "./texture/saturnus.jpg",
+          speed: 0.0003,
+          tilt: 26.73,
+        }, // Saturnus (100% ukuran matahari)
+        {
+          name: "Uranus",
+          distance: 120,
+          size: (4 / 5) * 3,
+          texture: "./texture/uranus.jpg",
+          speed: 0.0002,
+          tilt: 97.77,
+        }, // Uranus (80% ukuran matahari)
+        {
+          name: "Neptunus",
+          distance: 135,
+          size: (4.5 / 5) * 3,
+          texture: "./texture/neptunus.jpg",
+          speed: 0.0001,
+          tilt: 28.32,
+        }, // Neptunus (90% ukuran matahari)
+      ];
+
+      planetData.forEach((data) => {
+        const planetGeometry = new THREE.SphereGeometry(data.size, 32, 32);
+        const planetMaterial = new THREE.MeshPhongMaterial({
+          map: new THREE.TextureLoader().load(data.texture),
+          emissive: 0x000000,
+        }); // Gunakan material Phong dengan peta tekstur dan sifat emissive
+        const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+        planet.position.x = data.distance;
+        planet.rotation.z = (data.tilt * Math.PI) / 180; // Terapkan kemiringan planet
+        planets.push(planet);
+        scene.add(planet);
+
+        // Tambahkan cincin untuk Saturnus
+        if (data.name === "Saturnus") {
+          const ringGeometry = new THREE.RingGeometry(
+            (6 / 5) * 3,
+            (8 / 5) * 3,
+            64
+          );
+          const ringMaterial = new THREE.MeshBasicMaterial({
+            map: new THREE.TextureLoader().load("./texture/ring-saturn.png"),
+            emissive: 0xffff00,
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+          });
+          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+          ring.rotation.x = Math.PI / 2;
+          planet.add(ring);
+        }
+      });
+
+      // Cahaya ambien
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      // Cahaya arah
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(10, 10, 10);
+      scene.add(directionalLight);
+
+      // Fungsi untuk menangani peristiwa scroll
+      function handleScroll(event) {
+        const delta = event.deltaY;
+        // Sesuaikan posisi kamera berdasarkan arah scroll
+        if (activeCamera === topCamera) {
+          activeCamera.position.y -= delta * 0.1;
+        } else if (activeCamera === sideCamera) {
+          activeCamera.position.x += delta * 0.1;
+        }
+      }
+
+      // Lampirkan pendengar acara scroll
+      window.addEventListener("wheel", handleScroll);
+
+      // Animasi
+      function animate() {
+        requestAnimationFrame(animate);
+        animateSun(); // Panggil fungsi untuk menganimasikan matahari
+        planets.forEach((planet, index) => {
+          const angle = Date.now() * planetData[index].speed;
+          planet.position.x = Math.cos(angle) * planetData[index].distance;
+          planet.position.z = Math.sin(angle) * planetData[index].distance;
+          planet.rotation.y += 0.002; // Kurangi kecepatan rotasi
+        });
+        renderer.render(scene, activeCamera);
+      }
+      animate();
+
+      // Fungsi untuk beralih ke tampilan atas
+      function switchToTopView() {
+        activeCamera = topCamera;
+      }
+
+      // Fungsi untuk beralih ke tampilan samping
+      function switchToSideView() {
+        activeCamera = sideCamera;
+      }
+    </script>
+  </body>
+</html>
